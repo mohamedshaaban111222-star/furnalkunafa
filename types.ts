@@ -43,4 +43,15 @@ export type Order = {
   timestamp: number;
 };
 
-export type PaymentConfig =
+export type PaymentConfig = {
+  applePayEnabled: boolean;
+  cashOnDeliveryEnabled: boolean;
+  accountDetails?: string;
+};
+
+export type AdminConfig = {
+  username: string;
+  passwordHash: string;
+  bannerTitle?: string;
+  bannerSubtitle?: string;
+};

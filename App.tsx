@@ -6,7 +6,7 @@ import {
   Edit, Save, ArrowRight, MapPin, Store, CreditCard, Wallet,
   ChevronLeft, ChevronRight, CheckCircle2, Package, Image as ImageIcon,
   LogOut, TrendingUp, PieChart, Users, Lock, QrCode, X, PlusCircle, MinusCircle, Copy, Share2, 
-  Home as HomeIcon, Download, Upload, Info, Type, Globe
+  Home as HomeIcon, Download, Upload, Info, Type
 } from 'lucide-react';
 import { Product, Category, Branch, Order, OrderItem, PriceOption, PaymentConfig, AdminConfig } from './types';
 import { BRANCHES, INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './constants';
@@ -364,16 +364,18 @@ const Checkout: React.FC<{
     
     const message = `🏁 *طلب جديد من تطبيق فرن الكنافة* \n\n👤 *العميل:* ${customerName}\n🔢 *رقم الطلب:* #${order.id}\n📍 *الفرع:* ${branch.name}\n\n🛒 *الأصناف المطلوبة:*\n${itemsText}\n\n💰 *المجموع:* ${total} ر.س\n🚚 *طريقة الاستلام:* ${orderType === 'delivery' ? '✅ توصيل للمنزل' : '🏪 استلام من الفرع'}\n💳 *طريقة الدفع:* ${paymentMethod === 'apple_pay' ? '🍎 Apple Pay' : '💵 كاش'}\n\n${orderType === 'delivery' ? `🗺️ *الموقع:* ${customerLocation}` : ''}\n\n✨ *شكراً لاختياركم فرن الكنافة* ✨`;
     
+    // استخدام wa.me مع رقم الهاتف مضاف له مفتاح الدولة
     const waLink = `https://wa.me/${branch.phone}?text=${encodeURIComponent(message)}`;
     
     onOrderComplete(order);
     
-    // محاولة الإرسال للواتساب
-    window.location.href = waLink;
+    // التوجيه المباشر للواتساب لضمان تجاوز مانع النوافذ المنبثقة
+    window.location.assign(waLink);
     
+    // التوجه لصفحة النجاح بعد قليل
     setTimeout(() => {
         navigate('/success/' + order.id);
-    }, 1500);
+    }, 1000);
   };
 
   const getMyLocation = () => {
@@ -634,8 +636,11 @@ const Admin: React.FC<{
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // الرابط الفعلي للمتجر
-  const storeUrl = adminConfig.storeUrl || window.location.href.split('?')[0].split('#')[0] + '#/';
+  // الرابط المباشر للمتجر
+  const storeUrl = useMemo(() => {
+    const base = window.location.href.split('?')[0].split('#')[0];
+    return base + '#/';
+  }, []);
 
   const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
   const salesByProduct = useMemo(() => {
@@ -848,20 +853,6 @@ const Admin: React.FC<{
 
         {activeTab === 'settings' && (
           <div className="space-y-6 animate-in slide-in-from-right-4">
-            {/* إعدادات الرابط - جديد لضمان صحة الباركود */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-orange-50">
-              <h3 className="font-black text-gray-800 mb-8 flex items-center gap-2"><Globe size={20} className="text-orange-500" /> رابط المتجر الرسمي</h3>
-              <div className="space-y-4">
-                <p className="text-xs text-gray-400 font-bold leading-relaxed">أدخل الرابط الذي حصلت عليه بعد رفع الموقع (مثال: mykunafa.vercel.app). سيتم استخدامه لتوليد الباركود الصحيح.</p>
-                <input 
-                  className="w-full p-4 bg-orange-50/50 border border-orange-100 rounded-2xl font-black text-gray-700 outline-none focus:border-orange-500 shadow-inner" 
-                  value={adminConfig.storeUrl || ''} 
-                  placeholder="مثال: https://kunafa-oven.vercel.app"
-                  onChange={e => onUpdateAdmin({...adminConfig, storeUrl: e.target.value})} 
-                />
-              </div>
-            </div>
-
             {/* إعدادات اللوحة الترحيبية */}
             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-orange-50">
               <h3 className="font-black text-gray-800 mb-8 flex items-center gap-2"><Type size={20} className="text-orange-500" /> تعديل لوحة الترحيب (البانر)</h3>
@@ -915,6 +906,26 @@ const Admin: React.FC<{
                 </label>
               </div>
             </div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-orange-50">
+              <h3 className="font-black text-gray-800 mb-8 flex items-center gap-2"><CreditCard size={20} className="text-orange-500" /> خيارات الدفع المتاحة</h3>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl cursor-pointer border border-gray-100 hover:border-orange-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white text-[8px] font-bold"> Pay</div>
+                    <span className="font-black text-gray-700">تفعيل Apple Pay</span>
+                  </div>
+                  <input type="checkbox" className="w-6 h-6 accent-orange-600" checked={paymentConfig.applePayEnabled} onChange={e => onUpdatePayment({...paymentConfig, applePayEnabled: e.target.checked})} />
+                </label>
+                <label className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl cursor-pointer border border-gray-100 hover:border-orange-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white"><Wallet size={16}/></div>
+                    <span className="font-black text-gray-700">تفعيل الدفع عند الاستلام</span>
+                  </div>
+                  <input type="checkbox" className="w-6 h-6 accent-orange-600" checked={paymentConfig.cashOnDeliveryEnabled} onChange={e => onUpdatePayment({...paymentConfig, cashOnDeliveryEnabled: e.target.checked})} />
+                </label>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -948,8 +959,7 @@ const App: React.FC = () => {
       username: 'admin', 
       passwordHash: 'admin',
       bannerTitle: 'حلوياتنا صنعت بحب',
-      bannerSubtitle: 'أفضل أنواع الكنافة في المملكة',
-      storeUrl: ''
+      bannerSubtitle: 'أفضل أنواع الكنافة في المملكة'
     };
   });
 
